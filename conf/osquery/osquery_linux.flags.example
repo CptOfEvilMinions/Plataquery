@@ -1,0 +1,22 @@
+#### Agent ####
+--host_identifier=uuid
+--utc
+--disable_distributed=true
+--disable_carver=true
+--watchdog_level=0
+
+#### Config ####
+--config_plugin=s3
+--config_refresh=10
+
+#### Logging ####
+#--logger_plugin=tls
+#--logger_tls_endpoint=/api/v1/osquery/log
+#--logger_tls_period=10
+
+#### Extension ####
+--disable_extensions=false
+--extensions_autoload=/etc/osquery/extensions.load
+--extensions_require=s3
+--extensions_timeout=3
+--extensions_interval=3

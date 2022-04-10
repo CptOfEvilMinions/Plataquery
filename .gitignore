@@ -1,0 +1,10 @@
+terraform/.terraform
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+conf/osquery/osquery_test.secret
+conf/osquery/osquery.flags
+docker-compose.yml
+conf/osquery/osquery_linux.flags
+conf/osquery/osquery_test.secret
+osq-ext-s3.ext
