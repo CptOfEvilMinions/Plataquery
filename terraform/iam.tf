@@ -34,16 +34,17 @@ data "aws_iam_policy_document" "osquery_agent_policy_document" {
   }
 
   statement {
-    sid = "AllowOsqueryAgentToLogToKinesis"
+    sid = "AllowOsqueryAgentToLogToFirehose"
     effect = "Allow"
     actions = [
-      "kinesis:DescribeStream",
-      "kinesis:PutRecord",
-      "kinesis:PutRecords",
+      "firehose:DeleteDeliveryStream",
+      "firehose:PutRecord",
+      "firehose:PutRecordBatch",
+      "firehose:UpdateDestination"
     ]
   
     resources = [ 
-      "${aws_s3_bucket.osquery_configs.arn}/*" 
+      aws_kinesis_firehose_delivery_stream.osquery_firehose.arn
     ]
   }
 
@@ -54,9 +55,11 @@ resource "aws_iam_policy" "osquery_agent_policy" {
   policy = data.aws_iam_policy_document.osquery_agent_policy_document.json
 }
 
-######################################### Kinesis #########################################
-data "aws_iam_policy_document" "kinesis_assume_role_document" {
+######################################## Firehose #########################################
+data "aws_iam_policy_document" "firehose_assume_role_document" {
+  version = "2012-10-17"
   statement {
+    effect = "Allow"
     actions = ["sts:AssumeRole"]
 
     principals {
@@ -66,10 +69,34 @@ data "aws_iam_policy_document" "kinesis_assume_role_document" {
   }
 }
 
+data "aws_iam_policy_document" "firehose_role_policy_document" {
+  version = "2012-10-17"
+  statement {
+    sid = "AllowFirehoseToWriteToS3"
+    effect = "Allow"
+    actions = [ 
+      "s3:AbortMultipartUpload",
+      "s3:GetBucketLocation",
+      "s3:GetObject",
+      "s3:ListBucket",
+      "s3:ListBucketMultipartUploads",
+      "s3:PutObject" 
+    ]
+    resources = [
+      aws_s3_bucket.osquery_logs.arn,
+      "${aws_s3_bucket.osquery_logs.arn}/*"
+    ]
+  }
+}
+resource "aws_iam_policy" "firehose_role_policy" {
+  name = "firehose-role-policy"
+  policy = data.aws_iam_policy_document.firehose_role_policy_document.json
+}
 
-resource "aws_iam_role" "kinesis_assume_role" {
-  name = "kinesis-assume-role"
-  assume_role_policy = data.aws_iam_policy_document.kinesis_assume_role_document.json
+resource "aws_iam_role" "firehose_assume_role" {
+  name = "firehose-assume-role"
+  assume_role_policy = data.aws_iam_policy_document.firehose_assume_role_document.json
+  managed_policy_arns = [aws_iam_policy.firehose_role_policy.arn]
   tags = {
     Project = var.PROJECT_PREFIX
     Team    = var.TEAM

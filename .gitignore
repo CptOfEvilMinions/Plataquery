@@ -8,3 +8,5 @@ docker-compose.yml
 conf/osquery/osquery_linux.flags
 conf/osquery/osquery_test.secret
 osq-ext-s3.ext
+.env
+*.ext

@@ -7,12 +7,16 @@
 
 #### Config ####
 --config_plugin=s3
---config_refresh=10
+--config_refresh=300
 
 #### Logging ####
-#--logger_plugin=tls
-#--logger_tls_endpoint=/api/v1/osquery/log
-#--logger_tls_period=10
+--logger_tls_period=30
+--aws_firehose_period=30
+--logger_plugin=aws_firehose
+--aws_firehose_stream={{ aws_firehose_stream }}
+--aws_access_key_id={{ aws_access_key_id }}
+--aws_secret_access_key={{ aws_secret_access_key }}
+--aws_region={{ aws_region }}
 
 #### Extension ####
 --disable_extensions=false

@@ -31,7 +31,7 @@ resource "aws_s3_bucket_versioning" "osquery_configs_versioning" {
 resource "aws_s3_bucket_logging" "osquery_configs_logging" {
   bucket = aws_s3_bucket.osquery_configs.id
 
-  target_bucket = aws_s3_bucket.osquery_config_logging.id
+  target_bucket = aws_s3_bucket.osquery_config_access_logging.id
   target_prefix = "log/"
 }
 
@@ -75,19 +75,19 @@ resource "aws_s3_bucket_policy" "osquery_config_allow_agent_access" {
 
 
 ######################################### access log bucket #########################################
-resource "aws_s3_bucket" "osquery_config_logging" {
-  bucket = "osquery-config-logging-${random_string.random_s3_prefix.result}"
+resource "aws_s3_bucket" "osquery_config_access_logging" {
+  bucket = "osquery-config-access-logging-${random_string.random_s3_prefix.result}"
   tags = {
-    Name    = "osquery-config-logging"
+    Name    = "osquery-config-access-logging"
     Project = var.PROJECT_PREFIX
     Team    = var.TEAM
   }
 }
 
-resource "aws_s3_bucket_lifecycle_configuration" "osquery_config_logging_lifecycle" {
-  bucket = aws_s3_bucket.osquery_config_logging.id
+resource "aws_s3_bucket_lifecycle_configuration" "osquery_config_access_logging_lifecycle" {
+  bucket = aws_s3_bucket.osquery_config_access_logging.id
   rule {
-    id = "osquery-config-logging-lifecycle-rule"
+    id = "osquery-config-access-logging-lifecycle-rule"
     filter {
       prefix = "logs/"
     }
