@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -o osq-ext-s3.ext
 
 FROM ubuntu:20.04
 
-ARG OSQUERY_VERSION=5.2.2
+ARG OSQUERY_VERSION=5.1.0
 
 #### Install Osquery ####
 RUN apt-get update -q -y && apt-get install curl -y

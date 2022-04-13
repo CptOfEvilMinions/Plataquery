@@ -3,7 +3,7 @@
 --utc
 --disable_distributed=true
 --disable_carver=true
---watchdog_level=0
+--watchdog_level=-1
 
 #### Config ####
 --config_plugin=s3

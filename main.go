@@ -8,12 +8,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/osquery/osquery-go"
-	"github.com/osquery/osquery-go/plugin/config"
+	osquery_config "github.com/osquery/osquery-go/plugin/config"
 )
 
 type S3Config struct {
@@ -25,7 +25,7 @@ type S3Config struct {
 }
 
 var s3config S3Config
-var s3Client *s3.S3
+var s3Client *s3.Client
 
 var (
 	socket       = flag.String("socket", "", "Path to the extensions UNIX domain socket")
@@ -52,9 +52,37 @@ func readS3config(filePath string) (S3Config, error) {
 	return s3config, nil
 }
 
-func getS3config() (string, error) {
+func initS3client() (*s3.Client, error) {
+	// Get S3 config
+	var err error
+	if s3config, err = readS3config(*secretConfig); err != nil {
+		return nil, err
+	}
+
+	// Set S3 creds
+	creds := credentials.NewStaticCredentialsProvider(
+		s3config.AccessKey,
+		s3config.SecretKey,
+		"",
+	)
+
+	// Init S3 config
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithCredentialsProvider(creds),
+		config.WithRegion(s3config.Region),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Init S3 client
+	return s3.NewFromConfig(cfg), nil
+}
+
+func getS3config(ctx context.Context) (string, error) {
 	// Download file
-	result, err := s3Client.GetObject(&s3.GetObjectInput{
+	output, err := s3Client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s3config.Bucket),
 		Key:    aws.String(s3config.Config),
 	})
@@ -62,10 +90,10 @@ func getS3config() (string, error) {
 		log.Fatal(err)
 		return "", err
 	}
-	defer result.Body.Close()
+	defer output.Body.Close()
 
 	// Read file contents into buffer
-	s3FileByteArray, err := ioutil.ReadAll(result.Body)
+	s3FileByteArray, err := ioutil.ReadAll(output.Body)
 	if err != nil {
 		log.Fatal(err)
 		return "", err
@@ -74,27 +102,8 @@ func getS3config() (string, error) {
 }
 
 func GenerateConfigs(ctx context.Context) (map[string]string, error) {
-	// Get S3 config
-	var err error
-	if s3config, err = readS3config(*secretConfig); err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a session instance.
-	s3sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(s3config.Region),
-		Credentials: credentials.NewStaticCredentials(
-			s3config.AccessKey,
-			s3config.SecretKey,
-			"",
-		),
-	})
-	if err != nil {
-		log.Fatalln(err)
-	}
-	s3Client = s3.New(s3sess)
-
-	osqueryConfig, err := getS3config()
+	// Get Osquery config
+	osqueryConfig, err := getS3config(ctx)
 	if err != nil {
 		log.Fatal(err)
 		return nil, err
@@ -118,6 +127,13 @@ func main() {
 		time.Second * time.Duration(*interval),
 	)
 
+	// Init S3 client
+	var err error
+	s3Client, err = initS3client()
+	if err != nil {
+		log.Fatalf("Error creating extension: %s\n", err)
+	}
+
 	server, err := osquery.NewExtensionManagerServer(
 		"s3",
 		*socket,
@@ -129,7 +145,7 @@ func main() {
 	}
 
 	// create and register the plugin
-	server.RegisterPlugin(config.NewPlugin("s3", GenerateConfigs))
+	server.RegisterPlugin(osquery_config.NewPlugin("s3", GenerateConfigs))
 	if err := server.Run(); err != nil {
 		log.Fatalln(err)
 	}
